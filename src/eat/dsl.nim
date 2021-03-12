@@ -127,7 +127,6 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
     result.add parserids.mapIt(
         newCall(ann, it)
     )
-    echo result.repr
 
 
 when isMainModule:
