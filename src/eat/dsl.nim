@@ -118,7 +118,7 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
             ),
             newEmptyNode(),
             newStmtList(
-                parseExpr("proc d(it: string): string = it & \" in \" & " & it[0].strVal.escape),
+                parseExpr("proc d(it: string): string = it & \" in \" & " & it[1].strVal.escape),
                 newCall(debugErr, it[2].replace(), ident"d")   
             )
         )
@@ -127,6 +127,7 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
     result.add parserids.mapIt(
         newCall(ann, it)
     )
+    echo result.repr
 
 
 when isMainModule:
