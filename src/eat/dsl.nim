@@ -19,6 +19,10 @@ proc debugErr*[O](parser: Parser[O], callback: string -> string): Parser[O] =
         parser.toString
     )
 
+proc d(a: string): string -> string =
+    result = proc(it: string): string =
+        fmt"{it} in {a}"
+
 macro annotate(a: proc): untyped =
     discard
 macro ParserDef*(def: untyped, body: untyped): untyped =
@@ -52,6 +56,8 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
             parserids.add left
         of nnkCall(`left`@nnkIdent, nnkStmtList(nnkAsgn(`ty`, `right`))):
             delayedParsers.add (ty, left, right)
+            members.add newIdentDefs(left, BracketExpr(bindSym"Parser", ty))
+            memberid.add left
             parserids.add left
     result = newStmtList()
     result.add TypeSection(TypeDef(
@@ -61,40 +67,31 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
             RecList(members)
         ))
     ))
-    result.add ProcDef(
-        ident(fmt"new{parserid.strVal}"),
-        newEmptyNode(),
-        FormalParams(parserid),
-        newEmptyNode(),
-        newStmtList(
-            quote do:
-                `res` = `parserid`()
-        ).add inits
-    )
     let
         parser: NimNode = bindSym"Parser"
         debugErr = bindSym"debugErr"
-    proc replace(a: NimNode): NimNode =
+        d = bindSym"d"
+    proc replace(a: NimNode, b: NimNode = self): NimNode =
         a.forNode(
             nnkIdent,
             it => (
                 if it in parserids & members.mapIt(it[0]):
-                    DotExpr(self, it)
+                    DotExpr(b, it)
                 else:
                     it
             )
         )
-    result.add delayedParsers.mapIt(
-        ProcDef(
-            it[1], newEmptyNode(),
-            FormalParams(
-                nnkBracketExpr.newTree(parser, it[0]),
-                newIdentDefs(self, parserid)
-            ),
-            newEmptyNode(),
-            newEmptyNode()
-        )
-    )
+    # result.add delayedParsers.mapIt(
+    #     ProcDef(
+    #         it[1], newEmptyNode(),
+    #         FormalParams(
+    #             nnkBracketExpr.newTree(parser, it[0]),
+    #             newIdentDefs(self, parserid)
+    #         ),
+    #         newEmptyNode(),
+    #         newEmptyNode()
+    #     )
+    # )
     result.add parsers.mapIt(
         ProcDef(
             it[0], newEmptyNode(),
@@ -104,29 +101,46 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
             ),
             newEmptyNode(),
             newStmtList(
-                parseExpr("proc d(it: string): string = it & \" in \" & " & it[0].strVal.escape),
-                newCall(debugErr, it[1].replace(), ident"d")
+                newCall(debugErr, it[1].replace(), newCall(d, Lit it[0].strVal))
             )
         )
     )
-    result.add delayedParsers.mapIt(
-        ProcDef(
-            it[1], newEmptyNode(),
-            FormalParams(
-                nnkBracketExpr.newTree(parser, it[0]),
-                newIdentDefs(self, parserid)
-            ),
-            newEmptyNode(),
-            newStmtList(
-                parseExpr("proc d(it: string): string = it & \" in \" & " & it[1].strVal.escape),
-                newCall(debugErr, it[2].replace(), ident"d")   
+    # result.add delayedParsers.mapIt(
+    #     ProcDef(
+    #         it[1], newEmptyNode(),
+    #         FormalParams(
+    #             nnkBracketExpr.newTree(parser, it[0]),
+    #             newIdentDefs(self, parserid)
+    #         ),
+    #         newEmptyNode(),
+    #         newStmtList(
+    #             newCall(debugErr, it[2].replace(), newCall(d, Lit it[1].strVal))
+    #         )
+    #     )
+    # )
+    result.add ProcDef(
+        ident(fmt"new{parserid.strVal}"),
+        newEmptyNode(),
+        FormalParams(parserid),
+        newEmptyNode(),
+        newStmtList(
+            quote do:
+                `res` = `parserid`()
+        ).add(inits).add delayedParsers.mapIt(
+            Asgn(
+                DotExpr(res, it[1]),
+                newCall(debugErr, it[2].replace(res), newCall(d, Lit it[1].strVal))
             )
         )
     )
     let ann: NimNode = bindSym"annotate"
-    result.add parserids.mapIt(
-        newCall(ann, it)
+    # result.add parserids.mapIt(
+    #     newCall(ann, it)
+    # )
+    result.add parsers.mapIt(
+        newCall(ann, it[0])
     )
+    # echo result.repr
 
 
 when isMainModule:
@@ -181,7 +195,7 @@ when isMainModule:
         )
         Int0 = p"[0-9]+"
 
-        Atom: AstNode = Float \ Int \ Id + !p"."    @ (it => it[0])
+        Atom: AstNode = Float \ Int \ Id
 
         Id = Id0                                    @ (it => newIdNode(it.fragment))
         Int = Int0                                  @ (it => newIntNode(parseInt(it.fragment)))
@@ -193,3 +207,44 @@ when isMainModule:
     var
         parser = newParser()
     echo parser.Atom.parse("4").unwrap()
+    # type
+    #     Parser = ref object
+    #         indent: int
+    #         Atom: Parser[AstNode]
+
+    # proc Id0(self: Parser): auto =
+    #     debugErr(
+    #         alt(
+    #             p"[_\p{L}\p{Sm}\p{Nl}ー][_\p{L}\p{Sm}\p{N}ー]*",
+    #             -s"`" > p"[_\p{L}\p{Sm}\p{Nl}ー][_\p{L}\p{Sm}\p{N}ー]*" > -s"`" @ (it => it[0])
+    #         ),
+    #         d("Id0")
+    #     )
+
+    # proc Int0(self: Parser): auto =
+    #     debugErr(p"[0-9]+", d("Int0"))
+
+    # proc Id(self: Parser): auto =
+    #     debugErr(self.Id0 @ (it => newIdNode(it.fragment)), d("Id"))
+
+    # proc Int(self: Parser): auto =
+    #     debugErr(self.Int0 @ (it => newIntNode(parseInt(it.fragment))), d("Int"))
+
+    # proc Float(self: Parser): auto =
+    #     debugErr(alt(self.Int0 > -s"." > self.Int0 @
+    #     (it => newFloatNode(parseFloat(it[0].fragment & "." & it[1].fragment))), self.Int0 >
+    #     -s"." >
+    #     !self.Id0 @
+    #     (it => newFloatNode(parseFloat(it[0].fragment))), -s"." > self.Int0 @
+    #     (it => newFloatNode(parseFloat("." & it[0].fragment)))), d("Float"))
+
+    # proc newParser(): Parser =
+    #     result = Parser()
+    #     result.indent = 0
+    #     result.Atom = debugErr(result.Float \ result.Int \ result.Id, d("Atom"))
+
+    # annotate(Id0)
+    # annotate(Int0)
+    # annotate(Id)
+    # annotate(Int)
+    # annotate(Float)
