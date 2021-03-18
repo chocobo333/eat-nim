@@ -15,41 +15,41 @@ import eat
 
 suite "patterns":
     test "str":
-        check str"aiueo".parse("aiueo").isOk
-        check str"aiueo".parse("aiu").isErr
-        check str"aiueo".parse("biueo").isErr
+        check str"aiueo"("aiueo").isOk
+        check str"aiueo"("aiu").isErr
+        check str"aiueo"("biueo").isErr
     test "pattern":
-        check pattern".".parse("a").isOk
-        check pattern"a.c.".parse("abc®").isOk
+        check pattern"."("a").isOk
+        check pattern"a.c."("abc®").isOk
     test "sugar":
-        check s"aiueo".parse("aiueo").isOk
-        check s"aiueo".parse("aiu").isErr
-        check s"aiueo".parse("biueo").isErr
-        check p".".parse("a").isOk
-        check p"a.c.".parse("abc®").isOk
+        check s"aiueo"("aiueo").isOk
+        check s"aiueo"("aiu").isErr
+        check s"aiueo"("biueo").isErr
+        check p"."("a").isOk
+        check p"a.c."("abc®").isOk
 
 suite "repeats":
     test "many0":
-        check many0(s"a").parse("aaaa").isOk
-        check many0(s"b").parse("aaaa").isOk
+        check many0(s"a")("aaaa").isOk
+        check many0(s"b")("aaaa").isOk
     test "many1":
-        check many1(s"a").parse("aaaa").isOk
-        check many1(s"b").parse("aaaa").isErr
+        check many1(s"a")("aaaa").isOk
+        check many1(s"b")("aaaa").isErr
     test "manyMN":
         discard
     test "times":
-        check times(s"a", 3).parse("aaa").isOk
-        check times(s"a", 3).parse("aaaa").isOk
-        check times(s"a", 3).parse("aa").isErr
+        check times(s"a", 3)("aaa").isOk
+        check times(s"a", 3)("aaaa").isOk
+        check times(s"a", 3)("aa").isErr
     test "fold0":
-        check delimited(s"(", p"[0-9]".fold0(0, (acc, n)=>acc+parseInt(n.fragment)), s")").parse("(12345)").unwrap == 15
-        check delimited(s"(", p"[0-9]".fold0(1, (acc, n)=>acc*parseInt(n.fragment)), s")").parse("(12345)").unwrap == 120
+        check delimited(s"(", p"[0-9]".fold0(0, (acc, n)=>acc+parseInt(n.fragment)), s")")("(12345)").unwrap == 15
+        check delimited(s"(", p"[0-9]".fold0(1, (acc, n)=>acc*parseInt(n.fragment)), s")")("(12345)").unwrap == 120
     test "sugar":
-        check (*s"a").parse("aaaa").isOk
-        check (*s"b").parse("aaaa").isOk
-        check (+(s"a")).parse("aaaa").isOk
-        check (+(s"b")).parse("aaaa").isErr
-        check (s"a" * 3).parse("aaa").isOk
-        check (s"a" * 3).parse("aaaa").isOk
-        check (s"a" * 3).parse("aa").isErr
+        check (*s"a")("aaaa").isOk
+        check (*s"b")("aaaa").isOk
+        check (+(s"a"))("aaaa").isOk
+        check (+(s"b"))("aaaa").isErr
+        check (s"a" * 3)("aaa").isOk
+        check (s"a" * 3)("aaaa").isOk
+        check (s"a" * 3)("aa").isErr
 

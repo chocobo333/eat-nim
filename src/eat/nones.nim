@@ -14,11 +14,10 @@ proc empty*(self: typedesc[Spanned]): Spanned =
 
 
 proc none*[O: Emptiable](): Parser[O] =
-    newParser(
-        proc(src: Spanned): PResult[O] =
-            ok(typeof(result), (src, O.empty)),
-        "none"
-    )
+    result = proc(src: Spanned): PResult[O] =
+        if src.enstring:
+            return ok("none", O.empty)
+        ok(typeof(result), (src, O.empty))
 
 
 when isMainModule:

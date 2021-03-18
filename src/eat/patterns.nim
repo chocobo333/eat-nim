@@ -87,30 +87,31 @@ proc takeMatch(src: Spanned, pattern: string): PResult[Spanned] =
     match(src, p).filterIt(it.match.fragment != "").map(it => it.restnMatch, src, fmt"got ""{src.fragment[0..min(src.fragment.len-1, 8)]}"", but expect for pattern""{pattern}""")
 
 proc str*(bytes: string): Parser[Spanned] =
-    newParser(
-        proc(src: Spanned): PResult[Spanned] =
-            let tmp = src.taken(bytes)
-            if tmp.isSome:
-                ok tmp.get
-            else:
-                err(src, &"NotMatch @ str\"{bytes}\""),
-        genGraph("Bytes", bytes.escape)
-    )
+    result = proc(src: Spanned): PResult[Spanned] =
+        if src.enstring:
+            return ok(genGraph("Str", bytes), "")
+        let tmp = src.taken(bytes)
+        if tmp.isSome:
+            ok tmp.get
+        else:
+            err(src, &"NotMatch @ str\"{bytes}\"")
 
 proc pattern*(pattern: string): Parser[Spanned] =
-    newParser(
-        proc(src: Spanned): PResult[Spanned] =
-            # TODO: mixin or bind?
-            src.takeMatch(pattern),
-        genGraph("Pattern", pattern.escape)
-        # "Pattern " & pattern.escape
-    )
+    result = proc(src: Spanned): PResult[Spanned] =
+        if src.enstring:
+            return ok(genGraph("Pattern", pattern), "")
+        src.takeMatch(pattern)
 
 
 when isMainModule:
-    echo str("ff")
-    assert str("ff").parse("ffg").unwrap.fragment == "ff"
-    assert pattern("a.c.").parse("abc®aiuec").unwrap.fragment == "abc®"
-    echo pattern"a.c."
-    echo str"ff"
-    assert pattern("b*").parse("aaa").isErr
+    let
+        parser1 = str("ff")
+        parser2 = pattern"a.c."
+        parser3 = str"ff"
+    echo parser1
+    echo parser2
+    echo parser3
+    assert parser1("ffg").unwrap.fragment == "ff"
+    assert parser2("abc®aiuec").unwrap.fragment == "abc®"
+    assert parser3("aaa").isErr
+    assert parser1("ffg").debug.isOk

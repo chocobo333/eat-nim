@@ -11,6 +11,12 @@ type
         fragment*: string
         pos*: Position
         endpos*: Position
+        when defined(debug):
+            debug: bool
+
+proc default*(a: typedesc[Spanned]): Spanned =
+    Spanned()
+    
 
 proc newPosition*(line: int = 1, col : int = 1): Position =
     Position(line: line, col: col)
@@ -31,3 +37,8 @@ proc `$`*(self: Spanned): string =
 
 proc add*(self: var Spanned, s: string) =
     self.fragment.add s
+
+proc enstring*(self: Spanned): bool =
+    self.pos.line == -1
+proc enstring*(): Spanned =
+    newSpanned("", newPosition(-1), newPosition())
