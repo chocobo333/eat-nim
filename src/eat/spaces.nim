@@ -9,22 +9,30 @@ from combinator import alt
 
 
 proc spaces*(min, max: int): Parser[Spanned] =
+    let p = if min == 0:
+        alt(pattern(fmt"[[:blank:]]{{1,{max}}}"), none[Spanned]())
+    else:
+        pattern(fmt"[[:blank:]]{{{min},{max}}}")
     result = proc(src: Spanned): PResult[Spanned] =
         if src.enstring:
             return ok(fmt"Spaces({min}, {max})", "")
         if min == 0:
-            alt(pattern(fmt"[[:blank:]]{{1,{max}}}"), none[Spanned]())(src)
+            p(src)
         else:
-            pattern(fmt"[[:blank:]]{{{min},{max}}}")(src)
+            p(src)
 
 proc spaces*(min: int): Parser[Spanned] =
+    let p = if min == 0:
+        alt(pattern(r"[[:blank:]]{1,}"), none[Spanned]())
+    else:
+        pattern(fmt"[[:blank:]]{{{min},}}")
     result = proc(src: Spanned): PResult[Spanned] =
         if src.enstring:
             return ok(fmt"Spaces({min})", "")
         if min == 0:
-            alt(pattern(r"[[:blank:]]{1,}"), none[Spanned]())(src)
+            p(src)
         else:
-            pattern(fmt"[[:blank:]]{{{min},}}")(src)
+            p(src)
 
 proc spaces*(min, max: ref int): Parser[Spanned] =
     result = proc(src: Spanned): PResult[Spanned] =

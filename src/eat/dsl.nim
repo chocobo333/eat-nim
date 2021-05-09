@@ -76,6 +76,7 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
         ovrwrite: NimNode = bindSym"overwrite"
         debugErr = bindSym"debugErr"
         iparsertype = bindSym"IParserType"
+        toiparser = bindSym"toIparser"
         d = bindSym"d"
         ann: NimNode = bindSym"annotate"
         parserids = parsers.mapIt(it[0])
@@ -154,13 +155,10 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                 let
                     name2 = ident(fmt"{name.strVal}'")
                     def = def.replace()
-                result.add quote do:
-                    proc `name2`(`self`: `parserid`, `src`: `spanned`): `typ` =
-                        `def`(`self`, `src`)
-                    let `name`: `iparsertype`(typeof `name2`) = `name2`
+                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
+                result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
             else:
-                result.add quote do:
-                    let `name`: `typ` = (`def`).toIParser(`parserid`)
+                result.add LetSection(IdentDefs(name, typ, Call(toiparser, def, parserid)))
         else:
             if not containnondefed:
                 defed.add name
@@ -174,13 +172,10 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                     let
                         name2 = ident(fmt"{name.strVal}'")
                         def = def.replace()
-                    result.add quote do:
-                        proc `name2`(`self`: `parserid`, `src`: `spanned`): `typ` =
-                            `def`(`self`, `src`)
-                        let `name`: `iparsertype`(typeof `name2`) = `name2`
+                    result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
+                    result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
                 else:
-                    result.add quote do:
-                        let `name`: `typ` = (`def`).toIParser(`parserid`)
+                    result.add LetSection(IdentDefs(name, typ, Call(toiparser, def, parserid)))
             else:
                 defed.add name
                 delayed.add name
@@ -191,19 +186,19 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                         nnkBracketExpr.newTree(presult, typ)
                     def = def.overwriteDelayed
                     defr = def.replace()
+                    name2 = ident(fmt"{name.strVal}'")
                 if typ == ident"auto":
                     error "A type annotaion is needed.", name
-                result.add quote do:
-                    proc `name`(`self`: `parserid`, `src`: `spanned`): `typ`
-                after.add quote do:
-                    proc `name`(`self`: `parserid`, `src`: `spanned`): `typ` = (`defr`).toIParser(`parserid`)(`self`, `src`)
+                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Empty())
+                result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
+                after.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
 
     result.add after
             
     result.add parserids.mapIt(
         newCall(ann, it)
     )
-    echo result.repr
+    # echo result.repr
 
 
 when isMainModule:
@@ -295,3 +290,23 @@ when isMainModule:
     echo parser.Test("000")
     echo parser.Val("[4,3,[3,[1,2]]]")
     echo parser.List("[4,3,[3,[1,2]]]")
+
+    macro altimpl(args: varargs[typed]): untyped =
+        let
+            al = bindSym"alt"
+            toiparser = bindSym"toIParser"
+        result = newCall(al).add args.mapIt(
+            if it.getTypeInst.repr == "Parser": newCall(toIParser, it, ident"Parser") else: it
+        )
+        echo result.repr
+    macro alt(args: varargs[typed]): untyped =
+        let
+            al = bindSym("altimpl")
+        result = newCall(al)
+        for e in args:
+            result.add e
+    
+    proc test(self: Parser, src: Spanned): PResult[Spanned]
+    let test2: IParserType(typeof test) = test
+    echo alt(test2, s"f")
+    proc test(self: Parser, src: Spanned): PResult[Spanned] = s"f"(src)

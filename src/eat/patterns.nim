@@ -81,10 +81,8 @@ proc restnMatch(src: RegexMatchSpanned): (Spanned, Spanned) =
         newSpanned(m, src.pos, newpos)
     )
 
-proc takeMatch(src: Spanned, pattern: string): PResult[Spanned] =
-    let
-        p = re(fmt"(*UTF8){pattern}")
-    match(src, p).filterIt(it.match.fragment != "").map(it => it.restnMatch, src, fmt"got ""{src.fragment[0..min(src.fragment.len-1, 8)]}"", but expect for pattern""{pattern}""")
+proc takeMatch(src: Spanned, pattern: Regex): PResult[Spanned] =
+    match(src, pattern).filterIt(it.match.fragment != "").map(it => it.restnMatch, src, fmt"got ""{src.fragment[0..min(src.fragment.len-1, 8)]}"", but expect for pattern""{pattern.pattern}""")
 
 proc str*(bytes: string): Parser[Spanned] =
     result = proc(src: Spanned): PResult[Spanned] =
@@ -97,10 +95,12 @@ proc str*(bytes: string): Parser[Spanned] =
             err(src, &"NotMatch @ str\"{bytes}\"")
 
 proc pattern*(pattern: string): Parser[Spanned] =
+    let
+        p = re(fmt"(*UTF8){pattern}")
     result = proc(src: Spanned): PResult[Spanned] =
         if src.enstring:
             return ok(genGraph("Pattern", pattern), "")
-        src.takeMatch(pattern)
+        src.takeMatch(p)
 
 
 when isMainModule:

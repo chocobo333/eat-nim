@@ -21,7 +21,7 @@ proc negate*[O: Emptiable](parser: Parser[O]): Parser[O] =
         if src.enstring:
             return ok(genGraph("Negate", parser), O.default)
         if parser(src).isOk:
-            return err(src, "failed negative lookahead check")
+            return err(src, "failed negative lookahead check for " & $parser)
         else:
             return ok (src, O.empty)
 
@@ -38,7 +38,7 @@ proc negate*[O: Emptiable, T](parser: IParser[T, O]): IParser[T, O] =
         if src.enstring:
             return ok(genGraph("Negate", parser), O.default)
         if info.parser(src).isOk:
-            return err(src, "failed negative lookahead check")
+            return err(src, "failed negative lookahead check for " & $parser)
         else:
             return ok (src, O.empty)
 

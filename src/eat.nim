@@ -47,6 +47,8 @@ proc `>`*[O](a, b: Parser[O]): Parser[seq[O]] {.inline.} =
     sequence(@[a, b])
 proc `>`*[O](a: Parser[seq[O]], b: Parser[O]): Parser[seq[O]] {.inline.} =
     tupl(a, b).map(it => it[0] & it[1])
+proc `>`*[O](a: Parser[O], b: Parser[seq[O]]): Parser[seq[O]] {.inline.} =
+    tupl(a, b).map(it => it[0] & it[1])
 proc `@`*[O1, O2](a: Parser[O1], callback: O1 -> O2): Parser[O2] {.inline.} =
     a.map(callback)
 proc `@@`*[O1, O2](a: Parser[O1], callback: PResult[O1] -> PResult[O2]): Parser[O2] {.inline.} =
@@ -114,6 +116,18 @@ proc `>`*[T, O](a: IParser[T, seq[O]], b: IParser[T, O]): IParser[T, seq[O]] {.i
 proc `>`*[T, O](a: IParser[T, seq[O]], b: Parser[O]): IParser[T, seq[O]] {.inline.} =
     tupl(a, b.toIParser(T)).map(it => it[0] & it[1])
 proc `>`*[T, O](a: Parser[seq[O]], b: IParser[T, O]): IParser[T, seq[O]] {.inline.} =
+    tupl(a.toIParser(T), b).map(it => it[0] & it[1])
+proc `>`*[T, O](a: IParser[T, O], b: IParser[T, seq[O]]): IParser[T, seq[O]] {.inline.} =
+    tupl(a, b).map(it => it[0] & it[1])
+proc `>`*[T, O](a: IParser[T, O], b: Parser[seq[O]]): IParser[T, seq[O]] {.inline.} =
+    tupl(a, b.toIParser(T)).map(it => it[0] & it[1])
+proc `>`*[T, O](a: Parser[O], b: IParser[T, seq[O]]): IParser[T, seq[O]] {.inline.} =
+    tupl(a.toIParser(T), b).map(it => it[0] & it[1])
+proc `>`*[T, O](a: IParser[T, seq[O]], b: IParser[T, seq[O]]): IParser[T, seq[O]] {.inline.} =
+    tupl(a, b).map(it => it[0] & it[1])
+proc `>`*[T, O](a: IParser[T, seq[O]], b: Parser[seq[O]]): IParser[T, seq[O]] {.inline.} =
+    tupl(a, b.toIParser(T)).map(it => it[0] & it[1])
+proc `>`*[T, O](a: Parser[seq[O]], b: IParser[T, seq[O]]): IParser[T, seq[O]] {.inline.} =
     tupl(a.toIParser(T), b).map(it => it[0] & it[1])
 proc `@`*[T, O1, O2](a: IParser[T, O1], callback: O1 -> O2): IParser[T, O2] {.inline.} =
     a.map(callback)
