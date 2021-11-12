@@ -77,7 +77,7 @@ proc fold0*[O, T](parser: Parser[O], init: T, accumulator: (T, O) -> T): Parser[
         return ok (src, res)
 
 proc many0*[T, O](parser: IParser[T, O]): IParser[T, seq[O]] =
-    result = proc(info: T, src: Spanned): PResult[seq[O]] =
+    result = proc(info: ref T, src: Spanned): PResult[seq[O]] =
         if src.enstring:
             return ok(genGraph("Many0", parser), @[])
         var

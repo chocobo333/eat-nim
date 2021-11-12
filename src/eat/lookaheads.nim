@@ -26,7 +26,7 @@ proc negate*[O: Emptiable](parser: Parser[O]): Parser[O] =
             return ok (src, O.empty)
 
 proc lookahead*[T, O](parser: IParser[T, O]): IParser[T, O] =
-    result = proc(info: T, src: Spanned): PResult[O] =
+    result = proc(info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraph("LookAhead", parser), O.default)
         info.parser(src).mapSrc(it => src)
@@ -34,7 +34,7 @@ proc lookahead*[T, O](parser: IParser[T, O]): IParser[T, O] =
 proc la*[T, O](parser: IParser[T, O]): IParser[T, O] {.inline.} = lookahead(parser)
 
 proc negate*[O: Emptiable, T](parser: IParser[T, O]): IParser[T, O] =
-    result = proc(info: T, src: Spanned): PResult[O] =
+    result = proc(info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraph("Negate", parser), O.default)
         if info.parser(src).isOk:

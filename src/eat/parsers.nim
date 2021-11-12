@@ -39,7 +39,7 @@ else:
                 err*: string
 type
     Parser*[O] = proc(src: Spanned): PResult[O]
-    IParser*[T, O] = proc(info: T, src: Spanned): PResult[O]
+    IParser*[T, O] = proc(info: ref T, src: Spanned): PResult[O]
 
 proc `$`*[O](self: PResult[O]): string =
     case self.kind
@@ -67,7 +67,9 @@ proc `$`*[O](self: Parser[O]): string =
     self(enstring()).getSrc.fragment
 
 proc `$`*[T, O](self: IParser[T, O]): string =
-    var a = T()
+    var a: ref T
+    new(a)
+    a[] = T.default
     self(a, enstring()).getSrc.fragment
 
 template overwrite*[O](self: Parser[O], body: untyped): Parser[O] =
@@ -78,7 +80,7 @@ template overwrite*[O](self: Parser[O], body: untyped): Parser[O] =
             self(src)
     tmp
 template overwrite*[T, O](self: IParser[T, O], body: untyped): IParser[T, O] =
-    let tmp = proc (info: T, src: Spanned): PResult[O] =
+    let tmp = proc (info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             ok(body, O.default)
         else:
@@ -86,13 +88,13 @@ template overwrite*[T, O](self: IParser[T, O], body: untyped): IParser[T, O] =
     tmp
 
 proc toIParser*[O](self: Parser[O], T: typedesc): IParser[T, O] {.inline.} =
-    result = proc(info: T, src: Spanned): PResult[O] =
+    result = proc(info: ref T, src: Spanned): PResult[O] =
         self(src)
 proc toIParser*[T, O](self: IParser[T, O], t: typedesc): IParser[t, O] {.inline.} =
     when T is t:
         result = self
     else:
-        result = proc(info: t, src: Spanned): PResult[O] =
+        result = proc(info: ref t, src: Spanned): PResult[O] =
             self(src)
         
 

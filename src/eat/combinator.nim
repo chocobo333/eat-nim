@@ -171,7 +171,7 @@ proc surrounded*[O1, O2](outer: Parser[O1], inner: Parser[O2]): Parser[O2] =
     )
 
 proc alt*[T, O](parsers: seq[IParser[T, O]]): IParser[T, O] =
-    result = proc (info: T, src: Spanned): PResult[O] =
+    result = proc (info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraphS("Alt", parsers), O.default)
         for parser in parsers:
@@ -185,7 +185,7 @@ proc alt*[T, O](parsers: varargs[IParser[T, O]]): IParser[T, O] =
 proc tupl*[T, O1, O2](a: IParser[T, O1], b: IParser[T, O2]): IParser[T, (O1, O2)] =
     type
         O = (O1, O2)
-    result = proc(info: T, src: Spanned): PResult[O] =
+    result = proc(info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraph("Tuple", a, b), O.default)
         let resultA = info.a(src)
@@ -204,7 +204,7 @@ proc tupl*[T, O1, O2](a: IParser[T, O1], b: IParser[T, O2]): IParser[T, (O1, O2)
             return err(resultA.getSrc, resultA.getErr)
 
 proc tupl*[T, O1, O2, O3](tup: (IParser[T, O1], IParser[T, O2], IParser[T, O3])): IParser[T, (O1, O2, O3)] =
-    result = proc(info: T, src: Spanned): PResult[(O1, O2, O3)] =
+    result = proc(info: ref T, src: Spanned): PResult[(O1, O2, O3)] =
         if src.enstring:
             return ok(genGraph("Tuple", tup[0], tup[1], tup[2]), (O1.default, O2.default, O3.default))
         var
@@ -230,7 +230,7 @@ proc tupl*[T, O1, O2, O3](tup: (IParser[T, O1], IParser[T, O2], IParser[T, O3]))
         return ok (src, res)
 
 proc sequence*[T, O](parsers: seq[IParser[T, O]]): IParser[T, seq[O]] =
-    result = proc(info: T, src: Spanned): PResult[seq[O]] =
+    result = proc(info: ref T, src: Spanned): PResult[seq[O]] =
         if src.enstring:
             return ok(genGraphS("Sequence", parsers), @[])
         var
@@ -248,28 +248,28 @@ proc sequence*[T, O](parsers: varargs[IParser[T, O]]): IParser[T, seq[O]] =
     sequence(@parsers)
 
 proc map*[T, O1, O2](parser: IParser[T, O1], callback: O1 -> O2): IParser[T, O2] =
-    result = proc(info: T, src: Spanned): PResult[O2] =
+    result = proc(info: ref T, src: Spanned): PResult[O2] =
         if src.enstring:
             ok(genGraph("Map", parser, ("$1 -> $2" % [$O1, $O2])), O2.default)
         else:
             info.parser(src).map(callback)
 
 proc mapRes*[T, O1, O2](parser: IParser[T, O1], callback: PResult[O1] -> PResult[O2]): IParser[T, O2] =
-    result = proc(info: T, src: Spanned): PResult[O2] =
+    result = proc(info: ref T, src: Spanned): PResult[O2] =
         if src.enstring:
             ok(genGraph("MapRes", parser, ("$1 -> $2" % [$PResult[O1], $PResult[O2]])), O2.default)
         else:
             info.parser(src).callback
 
 proc mapErr*[T, O, E1, E2](parser: IParser[T, O], callback: E1 -> E2): IParser[T, O] =
-    result = proc(info: T, src: Spanned): PResult[O] =
+    result = proc(info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             ok(genGraph("MapErr", parser, ("$1 -> $2" % [$E1, $E2])), O.default)
         else:
             info.parser(src).mapErr(callback)
 
 proc opt*[T, O](parser: IParser[T, O]): IParser[T, Option[O]] =
-    result = proc(info: T, src: Spanned): PResult[Option[O]] =
+    result = proc(info: ref T, src: Spanned): PResult[Option[O]] =
         if src.enstring:
             return ok(genGraph("Opt", parser), none O)
         let tmp = info.parser(src)

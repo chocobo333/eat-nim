@@ -28,7 +28,7 @@ macro annotate(a: proc): untyped =
 macro IParserType(typ: typedesc): untyped =
     let t = typ.getTypeInst[1]
     let
-        T = t[0][1][1]
+        T = t[0][1][1][0]
         O = t[0][0][1]
         iparser = bindSym"IParser"
     nnkBracketExpr.newTree(iparser, T, O)
@@ -122,11 +122,12 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
     result.add ProcDef(
         ident(fmt"new{parserid.strVal}"),
         Empty(),
-        FormalParams(parserid),
+        FormalParams(RefTy parserid),
         Empty(),
         newStmtList(
             quote do:
-                `res` = `parserid`()
+                new(result)
+                `res`[] = `parserid`()
         ).add inits
     )
     for (name, typ, def) in parsers:
@@ -155,7 +156,7 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                 let
                     name2 = ident(fmt"{name.strVal}'")
                     def = def.replace()
-                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
+                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, RefTy parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
                 result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
             else:
                 result.add LetSection(IdentDefs(name, typ, Call(toiparser, def, parserid)))
@@ -172,7 +173,7 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                     let
                         name2 = ident(fmt"{name.strVal}'")
                         def = def.replace()
-                    result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
+                    result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, RefTy parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
                     result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
                 else:
                     result.add LetSection(IdentDefs(name, typ, Call(toiparser, def, parserid)))
@@ -189,9 +190,9 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
                     name2 = ident(fmt"{name.strVal}'")
                 if typ == ident"auto":
                     error "A type annotaion is needed.", name
-                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Empty())
+                result.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, RefTy parserid), newIdentDefs(src, spanned)), Empty(), Empty())
                 result.add LetSection(IdentDefs(name, Call(iparsertype, Call("typeof", name2)), name2))
-                after.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
+                after.add ProcDef(name2, Empty(), FormalParams(typ, newIdentDefs(self, RefTy parserid), newIdentDefs(src, spanned)), Empty(), Call(def, self, src))
 
     result.add after
             
@@ -279,6 +280,8 @@ when isMainModule:
             separated1(Val, s",".toIParser(Parser)),
             s"]".toIParser(Parser)
         )
+        Pos = pos()
+        Fail = Pos @ (it => newIntNode(indent[0]))
     var
         parser = newParser()
     echo parser.Int0("3").unwrap()
@@ -306,7 +309,7 @@ when isMainModule:
         for e in args:
             result.add e
     
-    proc test(self: Parser, src: Spanned): PResult[Spanned]
+    proc test(self: ref Parser, src: Spanned): PResult[Spanned]
     let test2: IParserType(typeof test) = test
     echo alt(test2, s"f")
-    proc test(self: Parser, src: Spanned): PResult[Spanned] = s"f"(src)
+    proc test(self: ref Parser, src: Spanned): PResult[Spanned] = s"f"(src)
