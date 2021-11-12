@@ -174,10 +174,14 @@ proc alt*[T, O](parsers: seq[IParser[T, O]]): IParser[T, O] =
     result = proc (info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraphS("Alt", parsers), O.default)
+        var tmp: ref T
+        new(tmp)
+        tmp[] = info[]
         for parser in parsers:
             result = info.parser(src)
             if result.isOk:
                 return
+            info[] = tmp[]
 
 proc alt*[T, O](parsers: varargs[IParser[T, O]]): IParser[T, O] =
     alt(@parsers)
@@ -188,6 +192,9 @@ proc tupl*[T, O1, O2](a: IParser[T, O1], b: IParser[T, O2]): IParser[T, (O1, O2)
     result = proc(info: ref T, src: Spanned): PResult[O] =
         if src.enstring:
             return ok(genGraph("Tuple", a, b), O.default)
+        var tmp: ref T
+        new(tmp)
+        tmp[] = info[]
         let resultA = info.a(src)
         if resultA.isOk:
             let
@@ -199,8 +206,10 @@ proc tupl*[T, O1, O2](a: IParser[T, O1], b: IParser[T, O2]): IParser[T, (O1, O2)
                     resultB = resultB.get
                 return ok(src, (resultA, resultB))
             else:
+                info[] = tmp[]
                 return err(resultB.getSrc, resultB.getErr)
         else:
+            info[] = tmp[]
             return err(resultA.getSrc, resultA.getErr)
 
 proc tupl*[T, O1, O2, O3](tup: (IParser[T, O1], IParser[T, O2], IParser[T, O3])): IParser[T, (O1, O2, O3)] =
@@ -272,10 +281,14 @@ proc opt*[T, O](parser: IParser[T, O]): IParser[T, Option[O]] =
     result = proc(info: ref T, src: Spanned): PResult[Option[O]] =
         if src.enstring:
             return ok(genGraph("Opt", parser), none O)
+        # var tmpinfo: ref T
+        # new(tmpinfo)
+        # tmpinfo[] = info[]
         let tmp = info.parser(src)
         if tmp.isOk:
             ok (tmp.getSrc, some tmp.get)
         else:
+            # info[] = tmpinfo[]
             ok (src, none(O))
 
 proc separated1*[T, O1, O2](parser: IParser[T, O1], delimiter: IParser[T, O2]): IParser[T, seq[O1]] =

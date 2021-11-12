@@ -110,13 +110,13 @@ macro ParserDef*(def: untyped, body: untyped): untyped =
         TypeDef(
             parserid,
             Empty(),
-            RefTy(
+            # RefTy(
+            # )
                 ObjectTy(
                     Empty(),
                     Empty(),
                     RecList(members)
                 )
-            )
         )
     )
     result.add ProcDef(
