@@ -37,7 +37,14 @@ proc s*(bytes: string): Parser[Spanned] = str(bytes)
 proc p*(pat: string): Parser[Spanned] = pattern(pat)
 proc sp*(min: int): Parser[Spanned] = spaces(min)
 proc sp*(min, max: int): Parser[Spanned] = spaces(min, max)
-proc pos*(): Parser[Spanned] = nones.none[Spanned]()
+proc pos*(): Parser[Spanned] = nones.none[Spanned]().mapRes (
+    proc(it: PResult[Spanned]): PResult[Spanned] = 
+        PResult[Spanned](
+            src: it.getSrc,
+            kind: Ok,
+            ok: Spanned(fragment: "", pos: it.getSrc.pos, endpos: it.getSrc.endpos)
+        )
+)
 
 proc `\`*[O](a: varargs[Parser[O]]): Parser[O] {.inline.} =
     alt(@a)

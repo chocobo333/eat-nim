@@ -9,7 +9,7 @@ import macros
 
 
 type
-    RK = enum
+    RK* = enum
         Ok
         Err
 
@@ -20,7 +20,7 @@ when defined(debug):
             children: seq[SpannedTree]
         PResult*[O] = object
             src*: Spanned ## remained
-            case kind: RK
+            case kind*: RK
             of Ok:
                 ok*: O ##  parsed
             of Err:
@@ -32,7 +32,7 @@ else:
     type
         PResult*[O] = object
             src*: Spanned ## remained
-            case kind: RK
+            case kind*: RK
             of Ok:
                 ok*: O ##  parsed
             of Err:
